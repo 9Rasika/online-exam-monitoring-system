@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <p class="tag">EXAM MONITORING</p>
+        <h1>Welcome back</h1>
+        <p class="subtitle">Sign in to access your examination dashboard.</p>
+
+        <form method="POST">
+            <label>Email address</label>
+            <input type="email" name="email" placeholder="name@example.com" required>
+
+            <label>Password</label>
+            <input type="password" name="password" placeholder="Enter your password" required>
+
+            <button type="submit">Sign In</button>
+        </form>
+
+        <p class="bottom-text">
+            New candidate?
+            <a href="{{ url_for('register') }}">Create an account</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

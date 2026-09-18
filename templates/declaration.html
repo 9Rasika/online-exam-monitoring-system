@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="auth-container">
+    <div class="auth-card declaration-card">
+
+        <p class="tag">EXAM DECLARATION</p>
+
+        <h1>Ready to Begin?</h1>
+
+        <p class="subtitle">
+            Please review the declaration below before starting your examination.
+        </p>
+
+        <div class="declaration-box">
+
+            <div class="declaration-icon">
+                ✓
+            </div>
+
+            <div class="declaration-content">
+                <h3>Examination Declaration</h3>
+
+                <p>
+                    I confirm that I am the registered candidate and I will
+                    complete this examination honestly and follow all
+                    examination rules.
+                </p>
+
+                <p>
+                    I understand that my camera and browser activity may be
+                    monitored during the examination for examination integrity.
+                </p>
+            </div>
+
+        </div>
+
+        <form method="POST">
+
+            <label class="agreement">
+                <input type="checkbox" name="agree" required>
+                <span>
+                    I have read and agree to the examination declaration.
+                </span>
+            </label>
+
+            <button
+                type="submit"
+                class="submit-photo-button">
+                Start Examination →
+            </button>
+
+        </form>
+
+    </div>
+</div>
+
+
+<style>
+
+    .declaration-card {
+        max-width: 650px;
+    }
+
+    .declaration-box {
+        display: flex;
+        gap: 18px;
+        align-items: flex-start;
+        padding: 22px;
+        margin: 25px 0;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 14px;
+        background: rgba(0, 0, 0, 0.025);
+        text-align: left;
+    }
+
+    .declaration-icon {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 600;
+        background: rgba(0, 128, 0, 0.10);
+    }
+
+    .declaration-content h3 {
+        margin: 0 0 8px;
+        font-size: 18px;
+    }
+
+    .declaration-content p {
+        margin: 8px 0;
+        line-height: 1.6;
+        font-size: 14px;
+    }
+
+    .agreement {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        text-align: left;
+        margin: 20px 0;
+        font-size: 14px;
+        line-height: 1.5;
+        cursor: pointer;
+    }
+
+    .agreement input {
+        margin-top: 4px;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
+
+</style>
+
+{% endblock %}

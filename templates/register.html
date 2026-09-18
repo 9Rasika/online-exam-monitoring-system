@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <p class="tag">CANDIDATE PORTAL</p>
+        <h1>Create your account</h1>
+        <p class="subtitle">Register before starting an examination session.</p>
+
+        <form method="POST" enctype="multipart/form-data">
+            <label>Full name</label>
+            <input type="text" name="full_name" placeholder="Enter your full name" required>
+
+            <label>Email address</label>
+            <input type="email" name="email" placeholder="name@example.com" required>
+
+            
+
+            <label>Password</label>
+            <input type="password" name="password" placeholder="At least 8 characters" required>
+
+            <button type="submit">Create Account</button>
+        </form>
+
+        <p class="bottom-text">
+            Already registered?
+            <a href="{{ url_for('login') }}">Sign in</a>
+        </p>
+    </div>
+</div>
+<script>
+    const openCameraButton = document.getElementById("openCameraButton");
+    const closeCameraButton = document.getElementById("closeCameraButton");
+    const cancelCameraButton = document.getElementById("cancelCameraButton");
+    const captureButton = document.getElementById("captureButton");
+    const retakeButton = document.getElementById("retakeButton");
+    const removePhotoButton = document.getElementById("removePhotoButton");
+
+    const cameraPanel = document.getElementById("cameraPanel");
+    const capturedPhotoPanel = document.getElementById("capturedPhotoPanel");
+    const cameraPreview = document.getElementById("cameraPreview");
+    const capturedPreview = document.getElementById("capturedPreview");
+    const photoCanvas = document.getElementById("photoCanvas");
+    const capturedPhoto = document.getElementById("capturedPhoto");
+    const uploadPhoto = document.getElementById("uploadPhoto");
+
+    let cameraStream = null;
+
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+
+        cameraPreview.srcObject = null;
+        captureButton.disabled = true;
+    }
+
+    function hideCameraPanel() {
+        stopCamera();
+        cameraPanel.hidden = true;
+    }
+
+    async function startCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Your browser does not support webcam access.");
+            return;
+        }
+
+        try {
+            stopCamera();
+
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: "user",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            });
+
+            cameraPreview.srcObject = cameraStream;
+            cameraPanel.hidden = false;
+            capturedPhotoPanel.hidden = true;
+            openCameraButton.hidden = true;
+
+            await cameraPreview.play();
+            captureButton.disabled = false;
+
+        } catch (error) {
+            console.error(error);
+            alert("Unable to access the camera. Please allow camera permission and try again.");
+            hideCameraPanel();
+            openCameraButton.hidden = false;
+        }
+    }
+
+    function removeCapturedPhoto() {
+        capturedPhoto.value = "";
+        capturedPreview.removeAttribute("src");
+        capturedPhotoPanel.hidden = true;
+        openCameraButton.hidden = false;
+    }
+
+    openCameraButton.addEventListener("click", startCamera);
+
+    captureButton.addEventListener("click", () => {
+        if (!cameraPreview.videoWidth || !cameraPreview.videoHeight) {
+            alert("The camera is still loading. Please try again in a moment.");
+            return;
+        }
+
+        photoCanvas.width = cameraPreview.videoWidth;
+        photoCanvas.height = cameraPreview.videoHeight;
+
+        const context = photoCanvas.getContext("2d");
+        context.drawImage(cameraPreview, 0, 0, photoCanvas.width, photoCanvas.height);
+
+        const imageData = photoCanvas.toDataURL("image/jpeg", 0.9);
+
+        capturedPhoto.value = imageData;
+        capturedPreview.src = imageData;
+
+        // Prevent two competing photos being sent to the server.
+        uploadPhoto.value = "";
+
+        hideCameraPanel();
+        capturedPhotoPanel.hidden = false;
+    });
+
+    retakeButton.addEventListener("click", () => {
+        removeCapturedPhoto();
+        startCamera();  // This correctly restarts the webcam.
+    });
+
+    removePhotoButton.addEventListener("click", removeCapturedPhoto);
+
+    closeCameraButton.addEventListener("click", () => {
+        hideCameraPanel();
+        openCameraButton.hidden = false;
+    });
+
+    cancelCameraButton.addEventListener("click", () => {
+        hideCameraPanel();
+        openCameraButton.hidden = false;
+    });
+
+    uploadPhoto.addEventListener("change", () => {
+        // When a file is selected, discard any webcam photo.
+        if (uploadPhoto.files.length > 0) {
+            removeCapturedPhoto();
+            hideCameraPanel();
+        }
+    });
+
+    // Always release webcam hardware when the page closes or refreshes.
+    window.addEventListener("beforeunload", stopCamera);
+</script>
+{% endblock %}

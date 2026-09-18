@@ -1,0 +1,58 @@
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="shield-icon">◈</div>
+        <div>
+            <strong>Exam Monitoring</strong>
+            <small>Candidate Portal</small>
+        </div>
+    </div>
+
+    <div class="candidate-mini-profile">
+        {% if session.get("photo_filename") %}
+            <img
+                src="{{ url_for('static', filename='uploads/' + session.get('photo_filename')) }}"
+                alt="Candidate profile photo"
+            >
+        {% endif %}
+
+        <div>
+            <strong>{{ session.get("candidate_name") }}</strong>
+            <small>Verified candidate</small>
+        </div>
+    </div>
+
+    <p class="menu-label">MAIN MENU</p>
+
+    <nav class="sidebar-menu">
+        <a class="{% if request.endpoint == 'dashboard' %}active{% endif %}"
+           href="{{ url_for('dashboard') }}">
+            <span>⌂</span> Dashboard
+        </a>
+
+        <a class="disabled-link" href="#">
+            <span>◫</span> My Exam
+        </a>
+
+        <a class="{% if request.endpoint == 'instructions' %}active{% endif %}"
+           href="{{ url_for('instructions') }}">
+            <span>ⓘ</span> Instructions
+        </a>
+
+        
+
+        <!-- <a class="disabled-link" href="#">
+            <span>◌</span> Profile
+        </a> -->
+
+        {% if session.get("is_admin") %}
+            <a href="http://127.0.0.1:8501" target="_blank" rel="noopener">
+                <span>◈</span> Admin Dashboard
+            </a>
+        {% endif %}
+    </nav>
+
+    <div class="sidebar-bottom">
+        <a class="disabled-link" href="#"><span>?</span> Support</a>
+        <a href="{{ url_for('logout') }}"><span>↪</span> Logout</a>
+    </div>
+</aside>

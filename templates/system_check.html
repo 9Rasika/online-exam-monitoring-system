@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="auth-container">
+    <div class="auth-card photo-card system-check-card">
+
+        <p class="tag">EXAM READINESS</p>
+
+        <h1>System Check</h1>
+
+        <p class="subtitle">
+            Please complete the checks below before starting your examination.
+        </p>
+
+        <!-- CHECK LIST -->
+        <div class="system-check-list">
+
+            <div class="check-item">
+                <div>
+                    <strong>Browser Compatibility</strong>
+                    <p>Your browser supports the required exam features.</p>
+                </div>
+                <span class="check-status" id="browserStatus">
+                    Checking...
+                </span>
+            </div>
+
+            <div class="check-item">
+                <div>
+                    <strong>Camera Permission</strong>
+                    <p>Camera permission is required for exam monitoring.</p>
+                </div>
+                <span class="check-status" id="permissionStatus">
+                    Checking...
+                </span>
+            </div>
+
+            <div class="check-item">
+                <div>
+                    <strong>Camera Accessibility</strong>
+                    <p>Checking whether your webcam is available.</p>
+                </div>
+                <span class="check-status" id="cameraStatus">
+                    Checking...
+                </span>
+            </div>
+
+        </div>
+
+        <!-- CAMERA PREVIEW -->
+        <div class="camera-panel" id="cameraPanel" hidden>
+
+            <div class="camera-header">
+                <span>Camera Preview</span>
+            </div>
+
+            <video
+                id="cameraPreview"
+                autoplay
+                playsinline
+                muted>
+            </video>
+
+        </div>
+
+        <!-- MESSAGE -->
+        <p id="systemMessage" class="subtitle">
+            Please wait while we check your system.
+        </p>
+
+        <!-- CONTINUE -->
+        <button
+            type="button"
+            id="continueButton"
+            class="submit-photo-button"
+            disabled>
+            Continue
+        </button>
+
+    </div>
+</div>
+
+
+<script>
+
+    const browserStatus =
+        document.getElementById("browserStatus");
+
+    const permissionStatus =
+        document.getElementById("permissionStatus");
+
+    const cameraStatus =
+        document.getElementById("cameraStatus");
+
+    const continueButton =
+        document.getElementById("continueButton");
+
+    const systemMessage =
+        document.getElementById("systemMessage");
+
+    const cameraPanel =
+        document.getElementById("cameraPanel");
+
+    const cameraPreview =
+        document.getElementById("cameraPreview");
+
+
+    let cameraStream = null;
+
+
+    function setStatus(element, success, successText, failureText) {
+
+        if (success) {
+            element.textContent = "✓ Ready";
+            element.classList.add("success");
+            element.classList.remove("error");
+        } else {
+            element.textContent = "✕ Failed";
+            element.classList.add("error");
+            element.classList.remove("success");
+        }
+
+        return success;
+    }
+
+
+    async function runSystemCheck() {
+
+        let browserOK = false;
+        let cameraOK = false;
+
+
+        /* --------------------------------
+           1. BROWSER CHECK
+        -------------------------------- */
+
+        browserOK =
+            !!navigator.mediaDevices &&
+            !!navigator.mediaDevices.getUserMedia;
+
+        setStatus(
+            browserStatus,
+            browserOK,
+            "✓ Ready",
+            "✕ Failed"
+        );
+
+
+        if (!browserOK) {
+
+            permissionStatus.textContent = "—";
+            cameraStatus.textContent = "—";
+
+            systemMessage.textContent =
+                "Your browser does not support the required camera features.";
+
+            return;
+        }
+
+
+        /* --------------------------------
+           2. CAMERA PERMISSION + ACCESS
+        -------------------------------- */
+
+        try {
+
+            cameraStream =
+                await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: false
+                });
+
+
+            /* Camera permission granted */
+
+            setStatus(
+                permissionStatus,
+                true,
+                "✓ Allowed",
+                "✕ Denied"
+            );
+
+
+            /* Camera accessible */
+
+            cameraOK = true;
+
+            setStatus(
+                cameraStatus,
+                true,
+                "✓ Available",
+                "✕ Unavailable"
+            );
+
+
+            /* Show camera preview */
+
+            cameraPreview.srcObject = cameraStream;
+            cameraPanel.hidden = false;
+
+            await cameraPreview.play();
+
+
+            if (browserOK && cameraOK) {
+
+                continueButton.disabled = false;
+
+                systemMessage.textContent =
+                    "All system checks passed. You can continue.";
+
+            }
+
+        } catch (error) {
+
+            permissionStatus.textContent =
+                "✕ Denied";
+
+            permissionStatus.classList.add("error");
+
+            cameraStatus.textContent =
+                "✕ Unavailable";
+
+            cameraStatus.classList.add("error");
+
+
+            systemMessage.textContent =
+                "Please allow camera access and make sure your webcam is connected.";
+
+        }
+    }
+
+
+    continueButton.addEventListener("click", () => {
+
+        if (cameraStream) {
+
+            cameraStream.getTracks().forEach(
+                track => track.stop()
+            );
+
+            cameraStream = null;
+        }
+
+        window.location.href =
+            "{{ url_for('declaration') }}";
+
+    });
+
+
+    window.addEventListener("beforeunload", () => {
+
+        if (cameraStream) {
+
+            cameraStream.getTracks().forEach(
+                track => track.stop()
+            );
+        }
+
+    });
+
+
+    runSystemCheck();
+
+</script>
+
+{% endblock %}

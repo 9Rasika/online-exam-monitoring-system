@@ -1,0 +1,13 @@
+Flask
+Werkzeug
+opencv-python
+numpy
+pandas
+matplotlib
+seaborn
+scikit-learn
+python-dotenv
+langchain-core
+langchain-google-genai
+streamlit
+pytest

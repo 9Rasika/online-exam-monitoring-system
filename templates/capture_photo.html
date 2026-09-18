@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card photo-card">
+        <p class="tag">IDENTITY VERIFICATION</p>
+        <h1>Capture your photo</h1>
+        <p class="subtitle">
+            Take a clear photo before accessing your examination dashboard.
+        </p>
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="camera-panel" id="cameraPanel" hidden>
+                <div class="camera-header">
+                    <span>Camera preview</span>
+                    <button type="button" class="text-button" id="closeCameraButton">
+                        Close
+                    </button>
+                </div>
+
+                <video id="cameraPreview" autoplay playsinline muted></video>
+
+                <div class="camera-actions">
+                    <button type="button" class="secondary-button" id="captureButton" disabled>
+                        Capture Photo
+                    </button>
+                </div>
+            </div>
+
+            <div class="captured-photo-panel" id="capturedPhotoPanel" hidden>
+                <img id="capturedPreview" alt="Captured registration photo">
+
+                <div class="camera-actions">
+                    <button type="button" class="secondary-button" id="retakeButton">
+                        Retake Photo
+                    </button>
+                </div>
+            </div>
+
+            <canvas id="photoCanvas" hidden></canvas>
+            <input type="hidden" name="captured_photo" id="capturedPhoto">
+
+            <button type="button" id="openCameraButton">
+                Open Camera
+            </button>
+
+            <div class="upload-divider"><span>OR</span></div>
+
+            <label>Upload a photo instead</label>
+            <input
+                type="file"
+                name="photo"
+                id="uploadPhoto"
+                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+            >
+
+            <button type="submit" class="submit-photo-button">
+                Continue to Dashboard
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const openCameraButton = document.getElementById("openCameraButton");
+    const closeCameraButton = document.getElementById("closeCameraButton");
+    const captureButton = document.getElementById("captureButton");
+    const retakeButton = document.getElementById("retakeButton");
+
+    const cameraPanel = document.getElementById("cameraPanel");
+    const capturedPhotoPanel = document.getElementById("capturedPhotoPanel");
+    const cameraPreview = document.getElementById("cameraPreview");
+    const capturedPreview = document.getElementById("capturedPreview");
+    const photoCanvas = document.getElementById("photoCanvas");
+    const capturedPhoto = document.getElementById("capturedPhoto");
+    const uploadPhoto = document.getElementById("uploadPhoto");
+
+    let cameraStream = null;
+
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+
+        cameraPreview.srcObject = null;
+        captureButton.disabled = true;
+    }
+
+    async function startCamera() {
+        try {
+            stopCamera();
+
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user" },
+                audio: false
+            });
+
+            cameraPreview.srcObject = cameraStream;
+            cameraPanel.hidden = false;
+            capturedPhotoPanel.hidden = true;
+            openCameraButton.hidden = true;
+
+            await cameraPreview.play();
+            captureButton.disabled = false;
+
+        } catch (error) {
+            alert("Camera access was denied or no webcam was found.");
+            openCameraButton.hidden = false;
+        }
+    }
+
+    openCameraButton.addEventListener("click", startCamera);
+
+    captureButton.addEventListener("click", () => {
+        photoCanvas.width = cameraPreview.videoWidth;
+        photoCanvas.height = cameraPreview.videoHeight;
+
+        photoCanvas.getContext("2d").drawImage(
+            cameraPreview, 0, 0, photoCanvas.width, photoCanvas.height
+        );
+
+        const imageData = photoCanvas.toDataURL("image/jpeg", 0.9);
+
+        capturedPhoto.value = imageData;
+        capturedPreview.src = imageData;
+        uploadPhoto.value = "";
+
+        stopCamera();
+        cameraPanel.hidden = true;
+        capturedPhotoPanel.hidden = false;
+    });
+
+    retakeButton.addEventListener("click", () => {
+        capturedPhoto.value = "";
+        capturedPhotoPanel.hidden = true;
+        startCamera();
+    });
+
+    closeCameraButton.addEventListener("click", () => {
+        stopCamera();
+        cameraPanel.hidden = true;
+        openCameraButton.hidden = false;
+    });
+
+    uploadPhoto.addEventListener("change", () => {
+        if (uploadPhoto.files.length > 0) {
+            capturedPhoto.value = "";
+            capturedPhotoPanel.hidden = true;
+            stopCamera();
+            cameraPanel.hidden = true;
+            openCameraButton.hidden = false;
+        }
+    });
+
+    window.addEventListener("beforeunload", stopCamera);
+</script>
+{% endblock %}

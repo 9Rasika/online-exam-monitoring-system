@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Monitoring</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<!-- {% set show_sidebar = session.get("candidate_id") and request.endpoint != "capture_photo" %} -->
+ {% set show_sidebar = session.get("candidate_id") and request.endpoint not in ["capture_photo", "exam"] %}
+
+<body>
+    {% if show_sidebar %}
+        <div class="app-layout">
+            {% include "sidebar.html" %}
+            <main class="dashboard-main">
+    {% else %}
+        <nav>
+            <a class="logo" href="/">Exam Monitoring</a>
+
+            <div class="nav-links">
+                {% if session.get("candidate_id") %}
+                    <span>Identity Verification</span>
+                {% else %}
+                    <a href="{{ url_for('login') }}">Login</a>
+                    <a class="nav-button" href="{{ url_for('register') }}">Register</a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <main>
+    {% endif %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="message {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+
+    </main>
+
+    {% if show_sidebar %}
+        </div>
+    {% endif %}
+</body>
+</html>

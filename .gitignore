@@ -1,0 +1,13 @@
+.env
+*.db
+*.sqlite
+*.sqlite3
+
+data/*.csv
+
+static/uploads/
+
+__pycache__/
+*.pyc
+
+data/charts/

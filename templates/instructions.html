@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <p class="tag">EXAM PREPARATION</p>
+    <h1>Candidate Instructions</h1>
+    <p class="subtitle">Please read these requirements before starting an exam session.</p>
+</section>
+
+<section class="instruction-card">
+    <h2>Before you begin</h2>
+
+    <ul class="instruction-list">
+        <li>Use a stable internet connection.</li>
+        <li>Remain visible to the webcam during the examination.</li>
+        <li>Do not switch browser tabs or leave the exam window.</li>
+        <li>Keep your registration identity information accurate.</li>
+        <li>Submit the examination before the available time ends.</li>
+    </ul>
+
+    <a class="primary-link-button" href="{{ url_for('dashboard') }}">
+        Return to Dashboard
+    </a>
+</section>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="submission-page">
+    <div class="submission-card">
+        <div class="success-check">✓</div>
+
+        <p class="tag">EXAMINATION COMPLETE</p>
+        <h1>Exam Submitted Successfully</h1>
+
+        <p class="submission-message">
+            Your answers and monitoring events have been saved securely.
+        </p>
+
+        <div class="submission-details">
+            <div>
+                <span>Exam name</span>
+                <strong>{{ exam_name }}</strong>
+            </div>
+
+            <div>
+                <span>Candidate</span>
+                <strong>{{ session.get("candidate_name") }}</strong>
+            </div>
+
+            <div>
+                <span>Submitted at</span>
+                <strong>{{ submitted_at[:19].replace("T", " ") }}</strong>
+            </div>
+
+            <div>
+                <span>Status</span>
+                <strong class="submitted-status">Submitted</strong>
+            </div>
+        </div>
+
+        <a class="view-analytics-button"
+           href="{{ url_for('view_analytics', session_id=session_id) }}">
+            View Analytics
+        </a>
+
+        <a class="return-dashboard-button" href="{{ url_for('dashboard') }}">
+            Return to Dashboard
+        </a>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="analytics-page">
+    <header class="analytics-header">
+        <div>
+            <p class="tag">EXAM ANALYTICS</p>
+            <h1>{{ exam_session.exam_name }}</h1>
+            <p class="subtitle">Your session integrity and monitoring-event analysis.</p>
+        </div>
+        <a class="return-dashboard-button" href="{{ url_for('dashboard') }}">
+            Return to Dashboard
+        </a>
+    </header>
+
+    <section class="analytics-summary" aria-label="Session summary">
+        <article>
+            <span>Integrity score</span>
+            <strong>{{ "%.2f"|format(integrity_report.integrity_score) }}%</strong>
+        </article>
+        <article>
+            <span>Risk level</span>
+            <strong class="risk-{{ integrity_report.risk_label|lower }}">
+                {{ integrity_report.risk_label }}
+            </strong>
+        </article>
+        <article>
+            <span>Violations</span>
+            <strong>{{ total_violations }}</strong>
+        </article>
+    </section>
+
+    <section class="ai-summary-card" aria-labelledby="ai-summary-title">
+        <p class="tag">GEMINI AI SUMMARY</p>
+        <h2 id="ai-summary-title">Integrity Summary</h2>
+        <p>{{ integrity_report.report_text }}</p>
+    </section>
+
+    <section class="analytics-grid">
+        <article class="chart-card chart-card-wide">
+            <h2>Integrity Score During Examination</h2>
+            <p>The score changes as suspicious events are recorded.</p>
+            <canvas id="scoreTrendChart" class="analytics-canvas"
+                    aria-label="Integrity score trend"></canvas>
+        </article>
+
+        <article class="chart-card">
+            <h2>Violation Frequency</h2>
+            <p>Count of each suspicious-event type in this session.</p>
+            <canvas id="eventFrequencyChart" class="analytics-canvas"
+                    aria-label="Suspicious event frequency"></canvas>
+        </article>
+
+        <article class="chart-card chart-card-wide">
+            <h2>Event Frequency Heatmap</h2>
+            <p>Darker cells represent more events in each 15-minute interval.</p>
+            <div id="eventHeatmap" class="event-heatmap" aria-label="Event frequency heatmap"></div>
+        </article>
+    </section>
+</section>
+
+<script id="analytics-data" type="application/json">{{ analytics_data|tojson }}</script>
+<script src="{{ url_for('static', filename='analytics.js') }}"></script>
+{% endblock %}

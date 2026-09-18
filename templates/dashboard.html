@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="dashboard-header">
+    <div>
+        <p class="tag">CANDIDATE DASHBOARD</p>
+        <h1>Welcome, {{ session.get("candidate_name") }}</h1>
+        <p class="subtitle">
+            Review your examination information and complete the system check before starting.
+        </p>
+    </div>
+
+    {% if session.get("photo_filename") %}
+        <img
+            class="dashboard-profile-photo"
+            src="{{ url_for('static', filename='uploads/' + session.get('photo_filename')) }}"
+            alt="Candidate profile photo"
+        >
+    {% endif %}
+</section>
+
+<section class="exam-start-card">
+    <div class="exam-start-content">
+        <p class="tag">UPCOMING EXAM</p>
+        <h2>Python Fundamentals Examination</h2>
+        <p>
+            This examination contains 3 sample questions and has a 90-minute time limit.
+            Browser monitoring begins when you start the exam.
+        </p>
+
+        <div class="exam-summary">
+            <div>
+                <span>Duration</span>
+                <strong>90 Minutes</strong>
+            </div>
+
+            <div>
+                <span>Questions</span>
+                <strong>3 Questions</strong>
+            </div>
+
+            <div>
+                <span>Monitoring</span>
+                <strong>Browser activity</strong>
+            </div>
+        </div>
+
+        <form action="{{ url_for('start_exam') }}" method="POST">
+            <button type="submit" class="start-exam-button">
+                Start Exam
+            </button>
+        </form>
+    </div>
+
+    <div class="exam-start-icon">▶</div>
+</section>
+
+<section class="dashboard-grid">
+    <article class="info-card">
+        <div class="card-icon">✓</div>
+        <h3>Identity verified</h3>
+        <p>Your registration photo has been saved and your account is ready.</p>
+        <span class="success-label">Verified</span>
+    </article>
+
+    
+
+    <article class="info-card">
+        <div class="card-icon">ⓘ</div>
+        <h3>Exam instructions</h3>
+        <p>Read the instructions carefully before beginning the examination.</p>
+        <a class="small-action" href="{{ url_for('instructions') }}">
+            View Instructions
+        </a>
+    </article>
+</section>
+{% endblock %}

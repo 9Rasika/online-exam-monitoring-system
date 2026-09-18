@@ -1,0 +1,730 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="exam-workspace" data-session-id="{{ exam_session['id'] }}">
+    <div id="monitoringAlerts" class="monitoring-alerts"></div>
+
+    <aside class="exam-sidebar">
+        <div class="exam-brand">
+            <div class="brand-mark">◈</div>
+            <div>
+                <strong>Exam Monitoring</strong>
+                <small>Online Exam Platform</small>
+            </div>
+        </div>
+
+        <div class="candidate-exam-info">
+            <span class="online-dot"></span>
+            <div>
+                <strong>{{ session.get("candidate_name") }}</strong>
+                <small>Candidate online</small>
+            </div>
+        </div>
+
+        <p class="sidebar-label">QUESTIONS</p>
+
+        <div class="exam-question-grid">
+    <button type="button" class="exam-question active" data-question="0">1</button>
+    <button type="button" class="exam-question" data-question="1">2</button>
+    <button type="button" class="exam-question" data-question="2">3</button>
+</div>
+
+        <div class="question-legend">
+            <p><span class="legend-dot current"></span> Current</p>
+            <p><span class="legend-dot pending"></span> Not visited</p>
+            <p><span class="legend-dot review"></span> Review</p>
+        </div>
+
+        <form
+            class="sidebar-submit"
+            action="{{ url_for('submit_exam', session_id=exam_session['id']) }}"
+            method="POST"
+        >
+            <button type="submit" class="danger-button">Submit Exam</button>
+        </form>
+    </aside>
+
+    <main class="exam-main">
+        <header class="exam-header">
+            <div>
+                <p class="tag">LIVE EXAMINATION</p>
+                <h1>{{ exam_session["exam_name"] }}</h1>
+            </div>
+
+            <div class="timer-card">
+                <span>TIME LEFT</span>
+                <strong id="timer">90:00</strong>
+            </div>
+        </header>
+
+        <div class="exam-content-grid">
+            <section class="question-card">
+    <div class="question-card-header">
+        <strong id="questionProgress">Question 1 of 3</strong>
+
+        <button type="button" class="mark-review-button">
+            ♡ Mark for Review
+        </button>
+    </div>
+
+    <div class="question-body">
+        <p class="question-number" id="questionNumber">1.</p>
+
+        <div>
+            <h2 id="questionText"></h2>
+
+            <div id="answerList"></div>
+        </div>
+    </div>
+
+    <footer class="question-footer">
+        <button type="button" class="secondary-button" id="previousButton">
+            ← Previous
+        </button>
+
+        <button type="button" class="next-question-button" id="nextButton">
+            Next →
+        </button>
+    </footer>
+</section>
+
+            <aside class="monitoring-column">
+                <section class="monitoring-card">
+                    <div class="card-title">
+                        <strong>Live Monitoring</strong>
+                        <span class="live-badge">LIVE</span>
+                    </div>
+
+                    <div class="camera-box">
+                        <video id="webcamVideo" autoplay playsinline muted></video>
+                        <!-- Draw face rectangle here -->
+                         <canvas id="overlayCanvas"></canvas>
+                         <!-- Hidden canvas used only to capture frames -->
+                          <canvas id="faceCanvas" hidden></canvas>
+
+                        <div id="webcamPlaceholder" class="webcam-placeholder">
+                            <span>◉</span>
+                            <p>Starting camera...</p>
+                        </div>
+
+                        <div id="cameraOverlay" class="camera-overlay">
+                            <span class="online-dot"></span> Camera active
+                        </div>
+                    </div>
+
+                    <div id="faceStatus" class="face-result waiting">
+                        <span>◌</span>
+                        <div>
+                            <strong>Face detection</strong>
+                            <small>Waiting for Haar Cascade...</small>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="monitoring-card">
+                    <div class="card-title">
+                        <strong>Recent Events</strong>
+                        <span id="eventCount">0</span>
+                    </div>
+
+                    <div id="eventList" class="event-list">
+                        <p class="empty-events">No monitoring events yet.</p>
+                    </div>
+                </section>
+
+                <section class="monitor-summary">
+                    <div>
+                        <span>Tab switches</span>
+                        <strong id="tabCount">0</strong>
+                    </div>
+                    <div>
+                        <span>Focus loss</span>
+                        <strong id="focusCount">0</strong>
+                    </div>
+                    <div>
+                        <span>Face alerts</span>
+                        <strong id="faceAlertCount">0</strong>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </main>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+    const examPage = document.querySelector(".exam-workspace");
+    const sessionId = examPage.dataset.sessionId;
+
+    const video = document.getElementById("webcamVideo");
+    const canvas = document.getElementById("faceCanvas");
+    const overlayCanvas = document.getElementById("overlayCanvas");
+    const overlayContext = overlayCanvas.getContext("2d");
+    const placeholder = document.getElementById("webcamPlaceholder");
+    const overlay = document.getElementById("cameraOverlay");
+    const faceStatus = document.getElementById("faceStatus");
+    const eventList = document.getElementById("eventList");
+    const alertContainer = document.getElementById("monitoringAlerts");
+
+    let stream = null;
+    let monitorTimer = null;
+    let lastFaceStatus = "";
+    let lastBrowserEventTime = 0;
+
+    const counts = {
+        total: 0,
+        tab: 0,
+        focus: 0,
+        face: 0
+    };
+
+    function updateCounts() {
+        document.getElementById("eventCount").textContent = counts.total;
+        document.getElementById("tabCount").textContent = counts.tab;
+        document.getElementById("focusCount").textContent = counts.focus;
+        document.getElementById("faceAlertCount").textContent = counts.face;
+    }
+
+    function showAlert(type, title, message) {
+        const alert = document.createElement("div");
+        alert.className = `monitor-alert ${type}`;
+        alert.innerHTML = `<strong>${title}</strong><span>${message}</span>`;
+
+        alertContainer.appendChild(alert);
+
+        setTimeout(() => alert.remove(), 5000);
+    }
+
+    function addEvent(type, message, level) {
+        const emptyMessage = eventList.querySelector(".empty-events");
+
+        if (emptyMessage) {
+            emptyMessage.remove();
+        }
+
+        const item = document.createElement("div");
+        item.className = `event-item ${level}`;
+
+        const time = new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+        });
+
+        item.innerHTML = `<span>${time}</span><strong>${type}</strong><small>${message}</small>`;
+        eventList.prepend(item);
+
+        while (eventList.children.length > 4) {
+            eventList.lastElementChild.remove();
+        }
+    }
+
+    async function saveBrowserEvent(eventType, details) {
+    const eventData = {
+        event_type: eventType,
+        details: details
+    };
+
+    const eventUrl = `/api/exam/${sessionId}/event`;
+
+    try {
+        const response = await fetch(
+            eventUrl,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(eventData)
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.error(
+                "Browser event error:",
+                result
+            );
+            return;
+        }
+
+        // ---------------------------------------------
+        // SUSPICIOUS EVENT DETECTED
+        // ---------------------------------------------
+
+        if (
+            result.suspicious
+            && result.suspicious_events
+            && result.suspicious_events.length > 0
+        ) {
+            const suspiciousEvent =
+                result.suspicious_events[
+                    result.suspicious_events.length - 1
+                ];
+
+            showAlert(
+                "danger",
+                "Suspicious Activity Detected",
+                suspiciousEvent.message
+            );
+
+            addEvent(
+                "Suspicious Event",
+                suspiciousEvent.message,
+                "danger"
+            );
+        }
+
+    } catch (error) {
+        console.error(
+            "Could not save browser event:",
+            error
+        );
+    }
+}
+
+    async function analyseFrame() {
+    if (video.readyState < 2) {
+        return;
+    }
+
+    canvas.width = 320;
+    canvas.height = 240;
+
+    canvas.getContext("2d").drawImage(
+        video,
+        0,
+        0,
+        320,
+        240
+    );
+
+    const frame = canvas.toDataURL(
+        "image/jpeg",
+        0.65
+    );
+
+    try {
+        const response = await fetch(
+            `/api/exam/${sessionId}/face-status`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    frame: frame
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            return;
+        }
+
+        // ---------------------------------------------
+        // Clear previous face rectangles
+        // ---------------------------------------------
+
+        overlayContext.clearRect(
+            0,
+            0,
+            overlayCanvas.width,
+            overlayCanvas.height
+        );
+
+        // ---------------------------------------------
+        // Draw detected face rectangles
+        // ---------------------------------------------
+
+        if (
+            result.faces
+            && result.faces.length > 0
+        ) {
+            const scaleX =
+                overlayCanvas.width / 320;
+
+            const scaleY =
+                overlayCanvas.height / 240;
+
+            overlayContext.strokeStyle = "#00ff00";
+            overlayContext.lineWidth = 3;
+
+            result.faces.forEach(face => {
+                overlayContext.strokeRect(
+                    face.x * scaleX,
+                    face.y * scaleY,
+                    face.w * scaleX,
+                    face.h * scaleY
+                );
+            });
+        }
+
+        // ---------------------------------------------
+        // Determine whether current status is an alert
+        // ---------------------------------------------
+
+        const isAlert = (
+            result.status === "no_face"
+            || result.status === "multiple_faces"
+        );
+
+        // ---------------------------------------------
+        // Update face status box
+        // ---------------------------------------------
+
+        faceStatus.className =
+            `face-result ${isAlert ? "danger" : "good"}`;
+
+        faceStatus.innerHTML = `
+            <span>${isAlert ? "!" : "✓"}</span>
+            <div>
+                <strong>${result.label}</strong>
+                <small>
+                    Haar Cascade:
+                    ${result.face_count} face(s)
+                </small>
+            </div>
+        `;
+
+        // ---------------------------------------------
+        // FACE ABSENT
+        // ---------------------------------------------
+
+        if (
+            result.status === "no_face"
+            && lastFaceStatus !== "no_face"
+        ) {
+            counts.total += 1;
+            counts.face += 1;
+
+            updateCounts();
+
+            addEvent(
+                "Face Alert",
+                "No Face Detected",
+                "danger"
+            );
+
+            showAlert(
+                "danger",
+                "Face Monitoring Alert",
+                "No Face Detected"
+            );
+        }
+
+        // ---------------------------------------------
+        // FACE RETURNED AFTER ABSENCE
+        // ---------------------------------------------
+
+        else if (
+            result.status === "face_detected"
+            && lastFaceStatus === "no_face"
+            && result.details
+            && result.details.includes("absent for")
+        ) {
+            counts.total += 1;
+            counts.face += 1;
+
+            updateCounts();
+
+            addEvent(
+                "Face Alert",
+                result.details,
+                "danger"
+            );
+
+            showAlert(
+                "danger",
+                "Face Absence Completed",
+                result.details
+            );
+        }
+
+        // ---------------------------------------------
+        // MULTIPLE FACES
+        // ---------------------------------------------
+
+        else if (
+            result.status === "multiple_faces"
+            && lastFaceStatus !== "multiple_faces"
+        ) {
+            counts.total += 1;
+            counts.face += 1;
+
+            updateCounts();
+
+            addEvent(
+                "Face Alert",
+                result.label,
+                "danger"
+            );
+
+            showAlert(
+                "danger",
+                "Face Monitoring Alert",
+                result.label
+            );
+        }
+
+        // ---------------------------------------------
+        // Remember current status
+        // ---------------------------------------------
+
+        lastFaceStatus = result.status;
+
+    } catch (error) {
+        console.error(
+            "Haar Cascade monitoring error:",
+            error
+        );
+    }
+}
+
+
+
+
+
+
+
+
+    const questions = [
+    {
+        text: "Which Python data type stores an ordered collection of values?",
+        options: ["Dictionary", "List", "Set", "Boolean"]
+    },
+    {
+        text: "What is the output of len([10, 20, 30])?",
+        options: ["2", "3", "10", "30"]
+    },
+    {
+        text: "Which keyword is used to define a function in Python?",
+        options: ["function", "define", "def", "func"]
+    }
+];
+
+let currentQuestion = 0;
+const answers = {};
+
+function renderQuestion() {
+    const question = questions[currentQuestion];
+
+    document.getElementById("questionProgress").textContent =
+        `Question ${currentQuestion + 1} of ${questions.length}`;
+
+    document.getElementById("questionNumber").textContent =
+        `${currentQuestion + 1}.`;
+
+    document.getElementById("questionText").textContent = question.text;
+
+    const answerList = document.getElementById("answerList");
+
+    answerList.innerHTML = question.options.map((option, index) => {
+        const letter = String.fromCharCode(65 + index);
+        const checked = answers[currentQuestion] === index ? "checked" : "";
+
+        return `
+            <label class="exam-answer">
+                <input
+                    type="radio"
+                    name="answer"
+                    value="${index}"
+                    ${checked}
+                >
+                <span>${letter}.</span>
+                ${option}
+            </label>
+        `;
+    }).join("");
+
+    document.querySelectorAll('input[name="answer"]').forEach((radio) => {
+        radio.addEventListener("change", (event) => {
+            answers[currentQuestion] = Number(event.target.value);
+        });
+    });
+
+    document.querySelectorAll(".exam-question").forEach((button) => {
+        const buttonQuestion = Number(button.dataset.question);
+
+        button.classList.toggle(
+            "active",
+            buttonQuestion === currentQuestion
+        );
+    });
+
+    document.getElementById("previousButton").disabled =
+    currentQuestion === 0;
+    
+    document.getElementById("nextButton").style.display =
+    currentQuestion === questions.length - 1
+        ? "none"
+        : "inline-block";
+        
+        document.getElementById("nextButton").textContent = "Next →";
+}
+
+document.querySelectorAll(".exam-question").forEach((button) => {
+    button.addEventListener("click", () => {
+        currentQuestion = Number(button.dataset.question);
+        renderQuestion();
+    });
+});
+
+document.getElementById("previousButton").addEventListener("click", () => {
+    if (currentQuestion > 0) {
+        currentQuestion -= 1;
+        renderQuestion();
+    }
+});
+
+document.getElementById("nextButton").addEventListener("click", () => {
+
+    if (currentQuestion < questions.length - 1) {
+
+        currentQuestion += 1;
+        renderQuestion();
+
+    } else {
+
+        document.querySelector(".sidebar-submit").scrollIntoView({
+            behavior: "smooth"
+        });
+
+    }
+
+});
+
+renderQuestion();
+    async function startCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user" },
+                audio: false
+            });
+
+            video.srcObject = stream;
+            await video.play();
+
+            overlayCanvas.width = video.videoWidth;
+            overlayCanvas.height = video.videoHeight;
+
+            placeholder.hidden = true;
+            overlay.classList.add("show");
+
+            monitorTimer = setInterval(analyseFrame, 700);
+
+        } catch (error) {
+            placeholder.innerHTML = "<span>!</span><p>Camera permission is required.</p>";
+            showAlert("danger", "Camera Access Required", "Allow webcam access to begin monitoring.");
+        }
+    }
+
+    function recordBrowserIssue(type, text) {
+        const now = Date.now();
+
+        if (now - lastBrowserEventTime < 700) {
+            return;
+        }
+
+        lastBrowserEventTime = now;
+        counts.total += 1;
+
+        if (type === "Tab Switch") {
+            counts.tab += 1;
+        } else {
+            counts.focus += 1;
+        }
+
+        updateCounts();
+        addEvent(type, text, "warning");
+        showAlert("warning", type, text);
+
+        const eventType = type === "Tab Switch"
+            ? "tab_switch"
+            : "window_focus_lost";
+
+        saveBrowserEvent(eventType, text);
+    }
+
+    let tabSwitchDetected = false;
+
+
+
+let browserBlurTimer = null;
+
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+        recordBrowserIssue(
+            "Tab Switch",
+            "You moved away from the examination tab."
+        );
+    }
+});
+
+window.addEventListener("blur", () => {
+    // Wait briefly before deciding that this is a real
+    // focus-loss event. When switching tabs, the browser
+    // may fire blur before visibilitychange.
+    browserBlurTimer = setTimeout(() => {
+        if (!document.hidden) {
+            recordBrowserIssue(
+                "Focus Lost",
+                "The examination window is no longer active."
+            );
+        }
+    }, 200);
+});
+
+window.addEventListener("focus", () => {
+    if (browserBlurTimer) {
+        clearTimeout(browserBlurTimer);
+        browserBlurTimer = null;
+    }
+});
+
+
+
+
+    let secondsRemaining = 90 * 60;
+
+    setInterval(() => {
+        if (secondsRemaining <= 0) {
+            return;
+        }
+
+        secondsRemaining -= 1;
+
+        const minutes = Math.floor(secondsRemaining / 60);
+        const seconds = secondsRemaining % 60;
+
+        document.getElementById("timer").textContent =
+            `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }, 1000);
+
+    window.addEventListener("beforeunload", () => {
+        if (monitorTimer) {
+            clearInterval(monitorTimer);
+        }
+
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+
+    startCamera();
+</script>
+{% endblock %}
